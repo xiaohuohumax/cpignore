@@ -1,5 +1,0 @@
----
-"cpignore": minor
----
-
-init

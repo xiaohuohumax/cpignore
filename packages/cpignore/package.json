@@ -1,7 +1,7 @@
 {
   "name": "cpignore",
   "type": "module",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "This is a file copy tool that can exclude specified directories or files based on the `.gitignore` file.",
   "author": {
     "name": "xiaohuohumax",
