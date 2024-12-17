@@ -1,0 +1,52 @@
+{
+  "name": "cpignore",
+  "type": "module",
+  "version": "0.0.0",
+  "description": "This is a file copy tool that can exclude specified directories or files based on the `.gitignore` file.",
+  "author": {
+    "name": "xiaohuohumax",
+    "url": "https://github.com/xiaohuohumax"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xiaohuohumax/cpignore.git"
+  },
+  "bugs": {
+    "url": "https://github.com/xiaohuohumax/cpignore/issues"
+  },
+  "keywords": [
+    "cpignore",
+    "gitignore",
+    "copy files",
+    "ignore"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "cpignore": "./cpignore.mjs"
+  },
+  "files": [
+    "cpignore.mjs",
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite-node src/cli.ts",
+    "build": "rimraf dist && rollup -c rollup.config.ts --configPlugin esbuild"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "ignore": "^6.0.2",
+    "p-limit": "^6.1.0",
+    "progress": "^2.0.3",
+    "yargs": "^17.7.2"
+  }
+}

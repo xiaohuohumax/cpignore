@@ -1,0 +1,62 @@
+{
+  "name": "cpignore-monorepo",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.0.4",
+  "description": "cpignore",
+  "author": {
+    "name": "xiaohuohumax",
+    "url": "https://github.com/xiaohuohumax"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xiaohuohumax/cpignore.git"
+  },
+  "scripts": {
+    "dev": "pnpm --filter cpignore run dev",
+    "build": "pnpm --filter cpignore run build",
+    "commit": "git add . && cz",
+    "postinstall": "simple-git-hooks",
+    "changeset": "changeset",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "release": "pnpm test && pnpm build && changeset publish"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^3.8.0",
+    "@changesets/changelog-github": "^0.5.0",
+    "@changesets/cli": "^2.27.9",
+    "@commitlint/cli": "^19.5.0",
+    "@commitlint/config-conventional": "^19.5.0",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^15.3.0",
+    "@types/node": "^22.10.2",
+    "@types/progress": "^2.0.7",
+    "@types/yargs": "^17.0.33",
+    "commitizen": "^4.3.1",
+    "cz-git": "^1.10.1",
+    "esbuild": "^0.24.0",
+    "eslint": "^9.13.0",
+    "rimraf": "^6.0.1",
+    "rollup": "^4.24.2",
+    "rollup-plugin-dts": "^6.1.1",
+    "rollup-plugin-esbuild": "^6.1.1",
+    "simple-git-hooks": "^2.11.1",
+    "vite-node": "^2.1.3",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^2.1.8"
+  },
+  "simple-git-hooks": {
+    "commit-msg": "npx commitlint --edit $1",
+    "pre-commit": "pnpm test && pnpm lint:fix && git add ."
+  },
+  "config": {
+    "commitizen": {
+      "path": "node_modules/cz-git"
+    }
+  }
+}
