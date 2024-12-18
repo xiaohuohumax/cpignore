@@ -1,5 +1,11 @@
 # cpignore
 
+## 1.0.2
+
+### Patch Changes
+
+- [`05c3f05`](https://github.com/xiaohuohumax/cpignore/commit/05c3f05520276dab41f2b7f5a8bc12bc9139c64d) Thanks [@xiaohuohumax](https://github.com/xiaohuohumax)! - 修正编译错误
+
 ## 1.0.1
 
 ### Patch Changes
