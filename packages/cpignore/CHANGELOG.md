@@ -1,5 +1,11 @@
 # cpignore
 
+## 1.0.1
+
+### Patch Changes
+
+- [`5dc0fbe`](https://github.com/xiaohuohumax/cpignore/commit/5dc0fbe2cc78794ceda347ba2b79e093fed11675) Thanks [@xiaohuohumax](https://github.com/xiaohuohumax)! - 修改拷贝逻辑(先搜再拷贝改为边搜遍拷贝)
+
 ## 1.0.0
 
 ### Major Changes
