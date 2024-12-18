@@ -4,7 +4,7 @@ import chalk from 'chalk'
 
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
-import cpignore, { DEFAULT_OPTIONS, VERSION } from './cpignore'
+import cpignore, { DEFAULT_OPTIONS, VERSION } from './index'
 
 const args = hideBin(process.argv)
 
