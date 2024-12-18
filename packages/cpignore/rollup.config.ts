@@ -4,7 +4,7 @@ import { defineConfig } from 'rollup'
 import dts from 'rollup-plugin-dts'
 import esbuild from 'rollup-plugin-esbuild'
 
-const external = ['ignore', 'yargs', 'yargs/helpers', 'progress', 'chalk', 'p-limit']
+const external = ['ignore', 'yargs', 'yargs/helpers', 'single-line-log', 'chalk', 'p-limit']
 
 const plugins = [
   resolve(),
@@ -27,7 +27,7 @@ const esmConfig = defineConfig({
 })
 
 const cjsConfig = defineConfig({
-  input: 'src/cpignore.ts',
+  input: 'src/index.ts',
   external,
   plugins,
   output: [
@@ -41,7 +41,7 @@ const cjsConfig = defineConfig({
 })
 
 const libDtsConfig = defineConfig({
-  input: 'src/cpignore.ts',
+  input: 'src/index.ts',
   external,
   plugins: plugins.concat(dts()),
   output: {

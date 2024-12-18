@@ -1,10 +1,11 @@
 import type { Ignore } from 'ignore'
+import type { LimitFunction } from 'p-limit'
 import fs from 'node:fs'
 import path from 'node:path'
 import chalk from 'chalk'
 import ignore from 'ignore'
 import pLimit from 'p-limit'
-import Progress from 'progress'
+import { stdout } from 'single-line-log'
 import { version } from '../package.json'
 
 export const VERSION: string = version
@@ -70,86 +71,6 @@ export const DEFAULT_OPTIONS: Required<Options> = {
   log: false,
 }
 
-function filterEmptyValues(arr: string[]): string[] {
-  return arr.filter(value => value.trim() !== '')
-}
-
-function parseOptions(options: Options): Required<Options> {
-  const ops: Required<Options> = Object.assign({}, DEFAULT_OPTIONS, options)
-  if (ops.src === undefined || ops.src.trim() === '') {
-    ops.src = '.'
-  }
-  ops.fileNames = filterEmptyValues(ops.fileNames)
-  ops.ruleSupplements = filterEmptyValues(ops.ruleSupplements)
-  ops.threads = Math.max(ops.threads, 1)
-
-  if (!fs.existsSync(ops.src)) {
-    throw new Error(`Source directory "${ops.src}" does not exist.`)
-  }
-  return ops
-}
-
-function initIgnore(folderPath: string, fileNames: string[], ruleSupplements: string[]): Ignore {
-  const ig = ignore({ allowRelativePaths: true })
-  for (const fileName of fileNames) {
-    const filePath = path.join(folderPath, fileName)
-    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-      ig.add(fs.readFileSync(filePath, 'utf8').toString())
-    }
-  }
-  return ig.add(ruleSupplements)
-}
-
-interface FileInfo {
-  path: string
-  isFile: boolean
-}
-
-function fileScanner(folderPath: string, paths: string[], fileNames: string[], ruleSupplements: string[]): FileInfo[] {
-  const files: FileInfo[] = []
-  const ig = initIgnore(folderPath, fileNames, ruleSupplements)
-
-  for (const file of fs.readdirSync(folderPath, { withFileTypes: true })) {
-    const fullPath = path.join(...paths, file.name)
-    if (file.isDirectory() && !ig.ignores(`${file.name}/`)) {
-      files.push({
-        path: `${fullPath}/`,
-        isFile: false,
-      })
-      files.push(
-        ...fileScanner(
-          path.join(folderPath, file.name),
-          paths.concat([file.name]),
-          fileNames,
-          ruleSupplements,
-        ),
-      )
-    }
-    else if (file.isFile() && !ig.ignores(file.name)) {
-      files.push({
-        path: fullPath,
-        isFile: true,
-      })
-    }
-  }
-
-  return files.filter(file => !ig.ignores(file.path))
-}
-
-interface ProgressBar {
-  (options: { file: string, stat: string }): void
-}
-
-function createProgressBar(total: number, enabled: boolean): ProgressBar {
-  const progress = new Progress(':stat :percent :etas :file', { total })
-
-  return function (options: { file: string, stat: string }) {
-    if (enabled) {
-      progress.tick(options)
-    }
-  }
-}
-
 /**
  * Copy file information
  */
@@ -164,41 +85,143 @@ export interface CpFile {
   dist: string
 }
 
-function cpFile(options: Required<Options>, file: FileInfo, progressBar: ProgressBar): CpFile {
-  const src = path.join(options.src, file.path)
-  const dist = path.join(options.dist, file.path)
-  progressBar({ stat: chalk.green('Copying'), file: chalk.gray(file.path) })
-
-  if (file.isFile) {
-    fs.mkdirSync(path.dirname(dist), { recursive: true })
-    fs.copyFileSync(src, dist)
-  }
-  else if (options.keepEmptyFolder) {
-    fs.mkdirSync(dist, { recursive: true })
-  }
-
-  return { src, dist }
+function filterEmptyValues(arr: string[]): string[] {
+  return arr.filter(value => value.trim() !== '')
 }
 
-/**
- * Copy files with ignore rules
- * @param options Options
- * @returns Copied files information
- */
-export default async function cpignore(options: Options): Promise<CpFile[]> {
-  const ops = parseOptions(options)
+interface LineLogger {
+  (message: string): void
+  end: () => void
+}
 
-  if (!fs.existsSync(ops.dist)) {
-    fs.mkdirSync(ops.dist, { recursive: true })
+function createLineLogger(enabled: boolean): LineLogger {
+  function logger(message: string) {
+    if (enabled) {
+      stdout.clear()
+      stdout(message)
+    }
   }
 
-  const files = fileScanner(ops.src, [], ops.fileNames, ops.ruleSupplements)
-  const progressBar = createProgressBar(files.length + 1, ops.log)
+  return Object.assign(logger, {
+    end: () => enabled && console.log(''),
+  })
+}
 
-  const limit = pLimit(ops.threads)
-  const cpJobs = files.map(file => limit(cpFile, ops, file, progressBar))
-  const cpFiles = await Promise.all(cpJobs)
+export class Cpignore {
+  private options: Required<Options>
+  private limit: LimitFunction
+  private cpJobs: Promise<CpFile>[]
+  private gIgnore: Ignore | null = null
+  private lineLogger: LineLogger
 
-  progressBar({ stat: chalk.green('Done'), file: '' })
-  return cpFiles
+  constructor(options: Options) {
+    this.options = this.parseOptions(options)
+    this.limit = pLimit(this.options.threads)
+    this.cpJobs = []
+    this.lineLogger = createLineLogger(this.options.log)
+    if (this.options.ruleSupplements.length > 0) {
+      this.gIgnore = ignore({ allowRelativePaths: true })
+        .add(this.options.ruleSupplements)
+    }
+  }
+
+  parseOptions(options: Options): Required<Options> {
+    const ops: Required<Options> = Object.assign({}, DEFAULT_OPTIONS, options)
+    if (ops.src === undefined || ops.src.trim() === '') {
+      ops.src = '.'
+    }
+    ops.fileNames = filterEmptyValues(ops.fileNames)
+    ops.ruleSupplements = filterEmptyValues(ops.ruleSupplements)
+    ops.threads = Math.max(ops.threads, 1)
+    return ops
+  }
+
+  checkOptions(): void {
+    if (!fs.existsSync(this.options.src)) {
+      throw new Error(`Source directory "${this.options.src}" does not exist.`)
+    }
+  }
+
+  initIgnore(folderPath: string): Ignore | null {
+    if (this.options.fileNames.length === 0) {
+      return null
+    }
+
+    const patterns: string[] = []
+    for (const fileName of this.options.fileNames) {
+      const filePath = path.join(folderPath, fileName)
+      if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+        patterns.push(fs.readFileSync(filePath, 'utf8').toString())
+      }
+    }
+    if (patterns.length === 0) {
+      return null
+    }
+
+    const ig = ignore({ allowRelativePaths: true })
+    patterns.forEach(pattern => ig.add(pattern))
+    return ig
+  }
+
+  checkIgnore(filePath: string, ignores: Ignore[]): boolean {
+    return (this.gIgnore ? [this.gIgnore, ...ignores] : ignores)
+      .some(ignore => ignore.ignores(filePath))
+  }
+
+  copyFile = (filePath: string, isFile: boolean) => {
+    const src = path.join(this.options.src, filePath)
+    const dist = path.join(this.options.dist, filePath)
+    this.lineLogger(`${chalk.blueBright('Copying')}: ${chalk.gray(filePath)}`)
+
+    if (isFile) {
+      fs.mkdirSync(path.dirname(dist), { recursive: true })
+      fs.copyFileSync(src, dist)
+    }
+    else if (this.options.keepEmptyFolder) {
+      fs.mkdirSync(dist, { recursive: true })
+    }
+    return { src, dist }
+  }
+
+  walkFolder(folderPath: string, paths: string[], parentIgnores: Ignore[]): void {
+    const ig = this.initIgnore(folderPath)
+    const ignores = parentIgnores.concat([])
+    ig && ignores.unshift(ig)
+
+    const files = fs.readdirSync(folderPath, { withFileTypes: true })
+    for (const file of files) {
+      const isDirectory = file.isDirectory()
+      const isFile = file.isFile()
+      if (!isDirectory && !isFile) {
+        // Ignore non-file and non-directory items
+        continue
+      }
+      const fPath = path.join(...paths, file.name) + (isDirectory ? '/' : '')
+
+      if (this.checkIgnore(fPath, ignores)) {
+        continue
+      }
+      const job = this.limit(this.copyFile, fPath, isFile)
+      this.cpJobs.push(job)
+      if (isDirectory) {
+        this.walkFolder(
+          path.join(folderPath, file.name),
+          paths.concat([file.name]),
+          ignores,
+        )
+      }
+    }
+  }
+
+  async run(): Promise<CpFile[]> {
+    this.checkOptions()
+    if (!fs.existsSync(this.options.dist)) {
+      fs.mkdirSync(this.options.dist, { recursive: true })
+    }
+    this.walkFolder(this.options.src, [], [])
+    const cpFiles = await Promise.all(this.cpJobs)
+    this.lineLogger(chalk.green(`Copied ${cpFiles.length} files.`))
+    this.lineLogger.end()
+    return cpFiles
+  }
 }

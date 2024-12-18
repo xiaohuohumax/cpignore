@@ -46,7 +46,10 @@
     "chalk": "^5.3.0",
     "ignore": "^6.0.2",
     "p-limit": "^6.1.0",
-    "progress": "^2.0.3",
+    "single-line-log": "^1.1.2",
     "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "@types/single-line-log": "^1.1.2"
   }
 }

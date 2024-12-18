@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import cpignore from '../packages/cpignore/src/cpignore'
+import cpignore from '../packages/cpignore/src/index'
 
 const src = path.join(__dirname, 'source')
 const dist = path.join(__dirname, 'dist')
